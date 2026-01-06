@@ -26,7 +26,7 @@
   <div class="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
     <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
       <h2 class="text-xl font-bold uppercase tracking-wider flex items-center gap-2">
-        <span class="material-icons">camera_enhance</span> AI Counter Pro
+        <span class="material-icons">camera_enhance</span> AI Counter F11
       </h2>
       <div id="status" class="flex items-center gap-1 text-xs bg-indigo-500 px-3 py-1 rounded-full border border-indigo-400">
         <span class="material-icons text-sm animate-spin" id="status-icon">hourglass_empty</span>
@@ -90,7 +90,7 @@
     async function loadModel() {
       try {
         session = await ort.InferenceSession.create("./f11_yolo11n_v1.onnx"); 
-        statusText.innerText = "READY (Auto-Fit)"; 
+        statusText.innerText = "READY (Model F11)"; 
         statusDiv.className = "flex items-center gap-1 text-xs bg-green-500 px-3 py-1 rounded-full border border-green-400 text-white";
         statusIcon.innerText = "check_circle"; 
         statusIcon.classList.remove("animate-spin");
@@ -309,4 +309,5 @@
   </script>
 </body>
 </html>
+
 
