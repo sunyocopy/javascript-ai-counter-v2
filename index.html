@@ -5,28 +5,36 @@
   <link rel="icon" type="image/x-icon" href="image/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
   
-  <title>AI Counter - Auto Aspect Ratio</title>
+  <title>AI Counter - F11 v2 (Final)</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   
-  <style>
-    body { font-family: "Prompt", sans-serif; }
-    #canvas-container { position: relative; width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #1e293b; }
-    /* อนุญาตให้เลื่อนจอได้ปกติ */
-    #canvas-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: manipulation; }
-  </style>
-  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+
+  <style>
+    body { font-family: "Prompt", sans-serif; }
+    #canvas-container { position: relative; width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #1e293b; }
+    #canvas-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: manipulation; }
+    
+    /* แก้ไขปัญหา @apply ด้วย Standard CSS */
+    .control-btn {
+      width: 2.25rem; height: 2.25rem; display: flex; align-items: center; justify-content: center;
+      background-color: white; border-radius: 0.5rem; color: #4f46e5; font-weight: bold;
+      border: 1px solid #e2e8f0; transition: all 0.1s; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .control-btn:hover { background-color: #f8fafc; }
+    .control-btn:active { transform: scale(0.9); }
+  </style>
 </head>
 <body class="bg-slate-50 py-4 px-3">
   
   <div class="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
     <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
       <h2 class="text-xl font-bold uppercase tracking-wider flex items-center gap-2">
-        <span class="material-icons">camera_enhance</span> AI Counter F11_v2
+        <span class="material-icons">analytics</span> AI Counter F11_v2
       </h2>
       <div id="status" class="flex items-center gap-1 text-xs bg-indigo-500 px-3 py-1 rounded-full border border-indigo-400">
         <span class="material-icons text-sm animate-spin" id="status-icon">hourglass_empty</span>
@@ -35,25 +43,48 @@
     </div>
 
     <div class="p-4 space-y-4">
-      <div id="total-count-display" class="hidden flex flex-col items-center py-2 bg-indigo-50 rounded-2xl border-2 border-indigo-100">
-        <span class="text-gray-500 text-xs font-medium tracking-widest uppercase">จำนวนเหล็กทั้งหมด</span>
-        <div class="text-6xl font-black text-indigo-700 leading-tight" id="count-number">0</div>
-        <span class="text-indigo-400 text-xs font-bold">REBAR PIECES</span>
+      <div id="total-count-display" class="hidden flex flex-col items-center py-4 bg-indigo-50 rounded-2xl border-2 border-indigo-100">
+        <span class="text-gray-500 text-xs font-medium tracking-widest uppercase">ตรวจพบเหล็กทั้งหมด</span>
+        <div class="text-7xl font-black text-indigo-700 leading-tight" id="count-number">0</div>
+        <span class="text-indigo-400 text-xs font-bold uppercase">Pieces Detected</span>
       </div>
 
-      <div class="flex flex-wrap gap-3 justify-center items-center">
-        <input type="file" id="image-input" accept="image/*" class="text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-600 file:text-white file:font-semibold hover:file:bg-indigo-700 cursor-pointer">
+      <div class="flex flex-wrap gap-3 justify-center items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
         
-        <button id="select-area-btn" class="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl transition-all shadow-sm active:scale-95">
+        <div class="flex items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
+          <div class="flex flex-col items-start pr-2 border-r border-slate-100 mr-2">
+            <span class="text-[9px] font-bold text-slate-400 uppercase leading-none">Confidence</span>
+            <span class="text-[10px] text-indigo-500 font-bold">ความแม่นยำ</span>
+          </div>
+          <button id="conf-down" class="control-btn">-</button>
+          <div id="conf-value" class="w-12 text-center font-black text-indigo-700">0.45</div>
+          <button id="conf-up" class="control-btn">+</button>
+        </div>
+
+        <div class="flex items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
+          <div class="flex flex-col items-start pr-2 border-r border-slate-100 mr-2">
+            <span class="text-[9px] font-bold text-slate-400 uppercase leading-none">Overlap</span>
+            <span class="text-[10px] text-pink-500 font-bold">ลดการซ้อน</span>
+          </div>
+          <button id="iou-down" class="control-btn">-</button>
+          <div id="iou-value" class="w-12 text-center font-black text-pink-600">0.45</div>
+          <button id="iou-up" class="control-btn">+</button>
+        </div>
+
+        <input type="file" id="image-input" accept="image/*" class="text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-600 file:text-white file:font-semibold hover:file:bg-indigo-700 cursor-pointer">
+      </div>
+
+      <div class="flex flex-wrap gap-2 justify-center">
+        <button id="select-area-btn" class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl transition-all shadow-sm active:scale-95">
           <span class="material-icons text-pink-500" id="btn-icon">brush</span> <span id="btn-text">เลือกพื้นที่</span>
         </button>
 
-        <button id="reset-btn" class="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-50">
-          <span class="material-icons">layers_clear</span> <span>ล้าง</span>
+        <button id="reset-btn" class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-50">
+          <span class="material-icons">refresh</span> <span>ล้างพื้นที่</span>
         </button>
 
-        <button id="download-btn" class="hidden items-center gap-2 px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-95 transition-all">
-          <span class="material-icons text-sm text-green-400">save</span> <span>บันทึกรูป</span>
+        <button id="download-btn" class="hidden items-center gap-2 px-8 py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-95 transition-all">
+          <span class="material-icons text-green-400">download</span> <span>บันทึกรูป</span>
         </button>
       </div>
 
@@ -71,7 +102,6 @@
     const drawingCanvas = document.getElementById("drawing-canvas");
     const drawingCtx = drawingCanvas.getContext("2d");
     
-    // UI Elements
     const statusText = document.getElementById("status-text");
     const statusDiv = document.getElementById("status");
     const statusIcon = document.getElementById("status-icon");
@@ -79,6 +109,8 @@
     const countDisplay = document.getElementById("total-count-display");
     const selectAreaBtn = document.getElementById("select-area-btn");
     const btnText = document.getElementById("btn-text");
+    const confValueDisplay = document.getElementById("conf-value");
+    const iouValueDisplay = document.getElementById("iou-value");
     
     let session;
     let currentImage;
@@ -86,7 +118,10 @@
     let isInSelectionMode = false;
     let isDrawing = false;
 
-    // --- 1. Load Model 640px ---
+    // Default Values
+    let confThreshold = 0.45;
+    let iouThreshold = 0.45;
+
     async function loadModel() {
       try {
         session = await ort.InferenceSession.create("./f11_yolo11n_v2.onnx"); 
@@ -96,11 +131,22 @@
         statusIcon.classList.remove("animate-spin");
       } catch (e) { 
         statusText.innerText = "MODEL ERROR"; 
-        console.error(e);
         Swal.fire({ icon: 'error', title: 'ไม่พบไฟล์โมเดล', text: 'ตรวจสอบไฟล์ f11_yolo11n_v2.onnx' });
       }
     }
     loadModel();
+
+    // UI Adjustment Logic
+    function updateThresholds() {
+      confValueDisplay.innerText = confThreshold.toFixed(2);
+      iouValueDisplay.innerText = iouThreshold.toFixed(2);
+      if (currentImage) runInference(currentImage);
+    }
+
+    document.getElementById("conf-up").onclick = () => { if(confThreshold < 0.95) { confThreshold += 0.05; updateThresholds(); }};
+    document.getElementById("conf-down").onclick = () => { if(confThreshold > 0.05) { confThreshold -= 0.05; updateThresholds(); }};
+    document.getElementById("iou-up").onclick = () => { if(iouThreshold < 0.95) { iouThreshold += 0.05; updateThresholds(); }};
+    document.getElementById("iou-down").onclick = () => { if(iouThreshold > 0.05) { iouThreshold -= 0.05; updateThresholds(); }};
 
     imageInput.addEventListener("change", (e) => {
       const file = e.target.files[0]; if (!file) return;
@@ -125,29 +171,18 @@
       reader.readAsDataURL(file);
     });
 
-    // --- 2. Inference Logic (New: Letterbox Support) ---
     async function runInference(image) {
       if (!session) return;
-      
       const size = 640;
-      
-      // 1. คำนวณ Scale เพื่อรักษาสัดส่วน (Letterboxing)
       const scale = Math.min(size / image.width, size / image.height);
-      const newWidth = image.width * scale;
-      const newHeight = image.height * scale;
-      const dx = (size - newWidth) / 2;
-      const dy = (size - newHeight) / 2;
+      const dx = (size - image.width * scale) / 2;
+      const dy = (size - image.height * scale) / 2;
 
-      // 2. วาดรูปลง Temp Canvas พร้อมเติมขอบดำ
-      const temp = document.createElement("canvas"); 
-      temp.width = temp.height = size;
+      const temp = document.createElement("canvas"); temp.width = temp.height = size;
       const tCtx = temp.getContext("2d"); 
+      tCtx.fillStyle = "#808080"; tCtx.fillRect(0, 0, size, size);
+      tCtx.drawImage(image, dx, dy, image.width * scale, image.height * scale);
       
-      tCtx.fillStyle = "#808080"; // ใช้สีเทากลางๆ แทนสีดำเพื่อให้เห็นเหล็กชัดขึ้น
-      tCtx.fillRect(0, 0, size, size);
-      tCtx.drawImage(image, dx, dy, newWidth, newHeight); // วาดรูปตรงกลาง
-      
-      // 3. Prepare Tensor
       const imgData = tCtx.getImageData(0, 0, size, size);
       const floatData = new Float32Array(3 * size * size);
       for (let i = 0; i < imgData.data.length; i += 4) { 
@@ -157,8 +192,6 @@
       }
       
       const res = await session.run({ images: new ort.Tensor("float32", floatData, [1, 3, size, size]) });
-      
-      // ส่งค่า Scale ไปด้วย เพื่อคำนวณพิกัดกลับ
       processAndDraw(Object.values(res)[0], image, scale, dx, dy);
     }
 
@@ -177,69 +210,42 @@
       return result;
     }
 
-    // New processAndDraw with Coordinate Mapping
     function processAndDraw(output, image, scale, dx, dy) {
       let boxes = [];
-      const CONF = 0.45; const IOU = 0.66;  
-
       for (let i = 0; i < output.dims[2]; i++) {
         const score = output.data[4 * output.dims[2] + i];
-        if (score > CONF) { 
-          const x_model = output.data[i];
-          const y_model = output.data[i + output.dims[2]];
-          const w_model = output.data[i + 2 * output.dims[2]];
-          const h_model = output.data[i + 3 * output.dims[2]];
-          
-          // เก็บค่าเป็น 640 scale ไว้ก่อน
-          boxes.push([
-            x_model - w_model/2, 
-            y_model - h_model/2, 
-            x_model + w_model/2, 
-            y_model + h_model/2, 
-            score
-          ]);
+        if (score > confThreshold) { 
+          const x = output.data[i], y = output.data[i + output.dims[2]], w = output.data[i + 2 * output.dims[2]], h = output.data[i + 3 * output.dims[2]];
+          boxes.push([x - w/2, y - h/2, x + w/2, y + h/2, score]);
         }
       }
       
-      let finalBoxes = nms(boxes, IOU);
-      // Sort Top->Bottom, Left->Right
+      let finalBoxes = nms(boxes, iouThreshold);
       finalBoxes.sort((a, b) => ((a[1] + a[3]) / 2) - ((b[1] + b[3]) / 2));
       
       ctx.drawImage(image, 0, 0); 
       let count = 0;
-      
       finalBoxes.forEach((box) => {
-        // *** คำนวณพิกัดกลับสู่ภาพจริง (Inverse Transform) ***
-        // สูตร: (ค่าจากโมเดล - ขอบดำ) / อัตราส่วนขยาย
-        const x1 = (box[0] - dx) / scale;
-        const y1 = (box[1] - dy) / scale;
-        const x2 = (box[2] - dx) / scale;
-        const y2 = (box[3] - dy) / scale;
+        const cx = ((box[0] + box[2]) / 2 - dx) / scale;
+        const cy = ((box[1] + box[3]) / 2 - dy) / scale;
+        const r = (Math.max(box[2] - box[0], box[3] - box[1]) / 2 / scale) * 0.7;
 
-        // หาจุดกึ่งกลางและรัศมีบนภาพจริง
-        const cx = (x1 + x2) / 2;
-        const cy = (y1 + y2) / 2;
-        const r = (Math.max(x2 - x1, y2 - y1) / 2) * 0.60;
-
-        // ตรวจสอบว่าจุดอยู่ในภาพจริงหรือไม่ (กันพลาด)
         if (cx >= 0 && cx <= image.width && cy >= 0 && cy <= image.height) {
           if (!drawnPath || drawingCtx.isPointInPath(drawnPath, cx, cy)) {
             count++; 
             ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); 
-            ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 3; ctx.stroke();
-            ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.7, 0, 2 * Math.PI); ctx.fill();
-            ctx.fillStyle = "black"; ctx.font = `bold ${Math.round(r * 0.8)}px Prompt`; 
+            ctx.strokeStyle = "#22c55e"; ctx.lineWidth = Math.max(2, image.width * 0.002); ctx.stroke();
+            ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.75, 0, 2 * Math.PI); ctx.fill();
+            ctx.fillStyle = "black"; ctx.font = `bold ${Math.round(r)}px Prompt`; 
             ctx.textAlign = "center"; ctx.textBaseline = "middle"; 
             ctx.fillText(count, cx, cy);
           }
         }
       });
-      
-      countNumber.innerText = count; 
-      countDisplay.classList.remove("hidden");
+      countNumber.innerText = count; countDisplay.classList.remove("hidden");
     }
 
-    // --- 3. Drawing System ---
+    // Drawing Logic
     function getCoords(e) {
       const rect = drawingCanvas.getBoundingClientRect();
       const scaleX = drawingCanvas.width / rect.width;
@@ -252,23 +258,21 @@
 
     function startDrawing(e) {
       if (!isInSelectionMode) return;
-      if(e.cancelable) e.preventDefault();
       isDrawing = true; drawnPath = new Path2D();
       const {x, y} = getCoords(e); drawnPath.moveTo(x, y);
     }
     function draw(e) {
       if (!isDrawing || !isInSelectionMode) return;
-      if(e.cancelable) e.preventDefault();
       const {x, y} = getCoords(e); drawnPath.lineTo(x, y);
       drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
       drawingCtx.strokeStyle = "#ec4899";
-      drawingCtx.lineWidth = Math.max(5, drawingCanvas.width * 0.005);
+      drawingCtx.lineWidth = Math.max(4, drawingCanvas.width * 0.004);
       drawingCtx.lineCap = "round"; drawingCtx.lineJoin = "round"; drawingCtx.stroke(drawnPath);
     }
-    function stopDrawing(e) {
+    function stopDrawing() {
       if (isDrawing) {
         isDrawing = false; drawnPath.closePath();
-        drawingCtx.fillStyle = "rgba(236, 72, 153, 0.25)"; drawingCtx.fill(drawnPath); drawingCtx.stroke(drawnPath);
+        drawingCtx.fillStyle = "rgba(236, 72, 153, 0.2)"; drawingCtx.fill(drawnPath);
         runInference(currentImage);
       }
     }
@@ -281,34 +285,27 @@
     window.addEventListener("touchend", stopDrawing);
 
     function resetButtonUI() {
-      selectAreaBtn.className = "flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl transition-all shadow-sm active:scale-95";
+      selectAreaBtn.className = "flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm";
       btnText.innerText = "เลือกพื้นที่";
-      drawingCanvas.style.touchAction = "manipulation"; 
     }
     selectAreaBtn.onclick = () => {
       if(!currentImage) return; isInSelectionMode = !isInSelectionMode;
       if (isInSelectionMode) {
-        selectAreaBtn.className = "flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl shadow-lg transform scale-105 transition-all";
-        btnText.innerText = "วาดได้เลย!";
-        drawingCanvas.style.touchAction = "none";
-        Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'โหมดวาด: หน้าจอจะล็อคเพื่อให้วาดง่ายขึ้น', showConfirmButton: false, timer: 3000 });
+        selectAreaBtn.className = "flex items-center gap-2 px-6 py-3 bg-pink-600 text-white font-bold rounded-xl shadow-lg transform scale-105";
+        btnText.innerText = "วาดได้เลย";
       } else {
         resetButtonUI(); drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); runInference(currentImage);
       }
     };
     document.getElementById("reset-btn").onclick = () => {
-      if(!currentImage) return; drawnPath = null; isInSelectionMode = false; isDrawing = false;
+      if(!currentImage) return; drawnPath = null; isInSelectionMode = false;
       resetButtonUI(); drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); runInference(currentImage);
     };
     document.getElementById("download-btn").onclick = () => {
       const link = document.createElement("a");
       link.download = `RebarCount-${countNumber.innerText}.png`;
       link.href = canvas.toDataURL(); link.click();
-      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: `จำนวน: ${countNumber.innerText} เส้น`, confirmButtonColor: '#16a34a', timer: 3000 });
     };
   </script>
 </body>
 </html>
-
-
-
