@@ -5,7 +5,7 @@
   <link rel="icon" type="image/x-icon" href="image/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
   
-  <title>AI Counter - F11 v2 (Final)</title>
+  <title>AI Counter - F11 v2 (Mobile Optimized)</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -15,11 +15,10 @@
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 
   <style>
-    body { font-family: "Prompt", sans-serif; }
+    body { font-family: "Prompt", sans-serif; transition: background-color 0.3s; }
     #canvas-container { position: relative; width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #1e293b; }
-    #canvas-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: manipulation; }
+    #canvas-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     
-    /* แก้ไขปัญหา @apply ด้วย Standard CSS */
     .control-btn {
       width: 2.25rem; height: 2.25rem; display: flex; align-items: center; justify-content: center;
       background-color: white; border-radius: 0.5rem; color: #4f46e5; font-weight: bold;
@@ -27,6 +26,9 @@
     }
     .control-btn:hover { background-color: #f8fafc; }
     .control-btn:active { transform: scale(0.9); }
+
+    /* เมื่อล็อคหน้าจอ จะเปลี่ยนสีพื้นหลังให้รู้ว่าอยู่ในโหมดวาด */
+    .selection-active { background-color: #fdf2f8; }
   </style>
 </head>
 <body class="bg-slate-50 py-4 px-3">
@@ -50,7 +52,6 @@
       </div>
 
       <div class="flex flex-wrap gap-3 justify-center items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
-        
         <div class="flex items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
           <div class="flex flex-col items-start pr-2 border-r border-slate-100 mr-2">
             <span class="text-[9px] font-bold text-slate-400 uppercase leading-none">Confidence</span>
@@ -90,7 +91,7 @@
 
       <div id="canvas-container">
         <canvas id="canvas" style="z-index: 1;"></canvas>
-        <canvas id="drawing-canvas" style="z-index: 2; cursor: crosshair;"></canvas>
+        <canvas id="drawing-canvas" style="z-index: 2; cursor: crosshair; touch-action: none;"></canvas>
       </div>
     </div>
   </div>
@@ -102,44 +103,30 @@
     const drawingCanvas = document.getElementById("drawing-canvas");
     const drawingCtx = drawingCanvas.getContext("2d");
     
-    const statusText = document.getElementById("status-text");
-    const statusDiv = document.getElementById("status");
-    const statusIcon = document.getElementById("status-icon");
     const countNumber = document.getElementById("count-number");
     const countDisplay = document.getElementById("total-count-display");
     const selectAreaBtn = document.getElementById("select-area-btn");
     const btnText = document.getElementById("btn-text");
-    const confValueDisplay = document.getElementById("conf-value");
-    const iouValueDisplay = document.getElementById("iou-value");
     
-    let session;
-    let currentImage;
-    let drawnPath = null;
-    let isInSelectionMode = false;
-    let isDrawing = false;
-
-    // Default Values
-    let confThreshold = 0.45;
-    let iouThreshold = 0.45;
+    let session, currentImage, drawnPath = null, isInSelectionMode = false, isDrawing = false;
+    let confThreshold = 0.45, iouThreshold = 0.45;
 
     async function loadModel() {
       try {
         session = await ort.InferenceSession.create("./f11_yolo11n_v2.onnx"); 
-        statusText.innerText = "READY (Model F11)"; 
-        statusDiv.className = "flex items-center gap-1 text-xs bg-green-500 px-3 py-1 rounded-full border border-green-400 text-white";
-        statusIcon.innerText = "check_circle"; 
-        statusIcon.classList.remove("animate-spin");
+        document.getElementById("status-text").innerText = "READY (Model F11)"; 
+        document.getElementById("status").className = "flex items-center gap-1 text-xs bg-green-500 px-3 py-1 rounded-full border border-green-400 text-white";
+        document.getElementById("status-icon").innerText = "check_circle"; 
+        document.getElementById("status-icon").classList.remove("animate-spin");
       } catch (e) { 
-        statusText.innerText = "MODEL ERROR"; 
         Swal.fire({ icon: 'error', title: 'ไม่พบไฟล์โมเดล', text: 'ตรวจสอบไฟล์ f11_yolo11n_v2.onnx' });
       }
     }
     loadModel();
 
-    // UI Adjustment Logic
     function updateThresholds() {
-      confValueDisplay.innerText = confThreshold.toFixed(2);
-      iouValueDisplay.innerText = iouThreshold.toFixed(2);
+      document.getElementById("conf-value").innerText = confThreshold.toFixed(2);
+      document.getElementById("iou-value").innerText = iouThreshold.toFixed(2);
       if (currentImage) runInference(currentImage);
     }
 
@@ -150,11 +137,7 @@
 
     imageInput.addEventListener("change", (e) => {
       const file = e.target.files[0]; if (!file) return;
-      drawnPath = null; 
-      drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-      isInSelectionMode = false;
-      resetButtonUI();
-
+      drawnPath = null; drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image(); img.src = event.target.result;
@@ -163,8 +146,7 @@
           document.getElementById("canvas-container").style.paddingTop = `${(img.height / img.width) * 100}%`;
           canvas.width = drawingCanvas.width = img.width; 
           canvas.height = drawingCanvas.height = img.height;
-          ctx.drawImage(img, 0, 0); 
-          runInference(img);
+          ctx.drawImage(img, 0, 0); runInference(img);
           document.getElementById("download-btn").classList.replace("hidden", "flex");
         };
       };
@@ -190,7 +172,6 @@
         floatData[i/4 + 409600] = imgData.data[i+1]/255.0; 
         floatData[i/4 + 819200] = imgData.data[i+2]/255.0; 
       }
-      
       const res = await session.run({ images: new ort.Tensor("float32", floatData, [1, 3, size, size]) });
       processAndDraw(Object.values(res)[0], image, scale, dx, dy);
     }
@@ -219,33 +200,27 @@
           boxes.push([x - w/2, y - h/2, x + w/2, y + h/2, score]);
         }
       }
-      
       let finalBoxes = nms(boxes, iouThreshold);
-      finalBoxes.sort((a, b) => ((a[1] + a[3]) / 2) - ((b[1] + b[3]) / 2));
-      
       ctx.drawImage(image, 0, 0); 
       let count = 0;
       finalBoxes.forEach((box) => {
         const cx = ((box[0] + box[2]) / 2 - dx) / scale;
         const cy = ((box[1] + box[3]) / 2 - dy) / scale;
         const r = (Math.max(box[2] - box[0], box[3] - box[1]) / 2 / scale) * 0.7;
-
         if (cx >= 0 && cx <= image.width && cy >= 0 && cy <= image.height) {
           if (!drawnPath || drawingCtx.isPointInPath(drawnPath, cx, cy)) {
-            count++; 
-            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); 
+            count++; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); 
             ctx.strokeStyle = "#22c55e"; ctx.lineWidth = Math.max(2, image.width * 0.002); ctx.stroke();
             ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.75, 0, 2 * Math.PI); ctx.fill();
             ctx.fillStyle = "black"; ctx.font = `bold ${Math.round(r)}px Prompt`; 
-            ctx.textAlign = "center"; ctx.textBaseline = "middle"; 
-            ctx.fillText(count, cx, cy);
+            ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(count, cx, cy);
           }
         }
       });
       countNumber.innerText = count; countDisplay.classList.remove("hidden");
     }
 
-    // Drawing Logic
+    // --- Drawing Logic Optimized for Mobile ---
     function getCoords(e) {
       const rect = drawingCanvas.getBoundingClientRect();
       const scaleX = drawingCanvas.width / rect.width;
@@ -258,15 +233,16 @@
 
     function startDrawing(e) {
       if (!isInSelectionMode) return;
+      if (e.cancelable) e.preventDefault(); // ล็อคการเลื่อนจอ
       isDrawing = true; drawnPath = new Path2D();
       const {x, y} = getCoords(e); drawnPath.moveTo(x, y);
     }
     function draw(e) {
       if (!isDrawing || !isInSelectionMode) return;
+      if (e.cancelable) e.preventDefault(); // ล็อคการเลื่อนจอ
       const {x, y} = getCoords(e); drawnPath.lineTo(x, y);
       drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-      drawingCtx.strokeStyle = "#ec4899";
-      drawingCtx.lineWidth = Math.max(4, drawingCanvas.width * 0.004);
+      drawingCtx.strokeStyle = "#ec4899"; drawingCtx.lineWidth = Math.max(4, drawingCanvas.width * 0.004);
       drawingCtx.lineCap = "round"; drawingCtx.lineJoin = "round"; drawingCtx.stroke(drawnPath);
     }
     function stopDrawing() {
@@ -284,23 +260,35 @@
     window.addEventListener("touchmove", draw, { passive: false });
     window.addEventListener("touchend", stopDrawing);
 
-    function resetButtonUI() {
-      selectAreaBtn.className = "flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm";
-      btnText.innerText = "เลือกพื้นที่";
-    }
     selectAreaBtn.onclick = () => {
-      if(!currentImage) return; isInSelectionMode = !isInSelectionMode;
+      if(!currentImage) return; 
+      isInSelectionMode = !isInSelectionMode;
       if (isInSelectionMode) {
+        // LOCK SCROLL
+        document.body.style.overflow = 'hidden';
+        document.body.classList.add('selection-active');
         selectAreaBtn.className = "flex items-center gap-2 px-6 py-3 bg-pink-600 text-white font-bold rounded-xl shadow-lg transform scale-105";
-        btnText.innerText = "วาดได้เลย";
+        btnText.innerText = "วาดได้เลย (จอล็อคแล้ว)";
+        Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'โหมดวาด: หน้าจอล็อคแล้ว', showConfirmButton: false, timer: 1500 });
       } else {
-        resetButtonUI(); drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); runInference(currentImage);
+        // UNLOCK SCROLL
+        document.body.style.overflow = '';
+        document.body.classList.remove('selection-active');
+        selectAreaBtn.className = "flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm";
+        btnText.innerText = "เลือกพื้นที่";
+        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); 
+        runInference(currentImage);
       }
     };
+
     document.getElementById("reset-btn").onclick = () => {
       if(!currentImage) return; drawnPath = null; isInSelectionMode = false;
-      resetButtonUI(); drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); runInference(currentImage);
+      document.body.style.overflow = ''; document.body.classList.remove('selection-active');
+      selectAreaBtn.className = "flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm";
+      btnText.innerText = "เลือกพื้นที่";
+      drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); runInference(currentImage);
     };
+    
     document.getElementById("download-btn").onclick = () => {
       const link = document.createElement("a");
       link.download = `RebarCount-${countNumber.innerText}.png`;
