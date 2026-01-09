@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="image/favicon.ico">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   
-  <title>AI Counter - F11 v2 (Final Build)</title>
+  <title>AI Counter - F11 v2 (Zoom Enabled)</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -89,7 +89,7 @@
 
       <div id="canvas-container">
         <canvas id="canvas" style="z-index: 1;"></canvas>
-        <canvas id="drawing-canvas" style="z-index: 2; cursor: crosshair; touch-action: none;"></canvas>
+        <canvas id="drawing-canvas" style="z-index: 2; cursor: crosshair;"></canvas>
       </div>
     </div>
   </div>
@@ -106,12 +106,12 @@
     const btnText = document.getElementById("btn-text");
     
     let session, currentImage, drawnPath = null, isInSelectionMode = false, isDrawing = false;
-    let confThreshold = 0.45, iouThreshold = 0.45;
+    let confThreshold = 0.50, iouThreshold = 0.50;
 
     async function loadModel() {
       try {
         session = await ort.InferenceSession.create("./f11_yolo11n_v2.onnx"); 
-        document.getElementById("status-text").innerText = "READY Model F11_v2"; 
+        document.getElementById("status-text").innerText = "READY model f11"; 
         document.getElementById("status").className = "flex items-center gap-1 text-[10px] bg-green-500 px-2 py-1 rounded-full border border-green-400 text-white";
         document.getElementById("status-icon").innerText = "check_circle"; 
         document.getElementById("status-icon").classList.remove("animate-spin");
@@ -197,13 +197,11 @@
       }
       let finalBoxes = nms(boxes, iouThreshold);
       
-      // --- เรียงลำดับแบบ บนลงล่าง + ซ้ายไปขวา ---
       finalBoxes.sort((a, b) => {
         const centerA_y = (a[1] + a[3]) / 2;
         const centerB_y = (b[1] + b[3]) / 2;
         const centerA_x = (a[0] + a[2]) / 2;
         const centerB_x = (b[0] + b[2]) / 2;
-        // ถ้าความสูงต่างกันเกิน 20px (ใน Model scale 640) ถือว่าเป็นคนละแถว
         if (Math.abs(centerA_y - centerB_y) > 20) return centerA_y - centerB_y;
         return centerA_x - centerB_x;
       });
@@ -270,12 +268,16 @@
       if(!currentImage) return; 
       isInSelectionMode = !isInSelectionMode;
       if (isInSelectionMode) {
+        // --- โหมดวาด: ล็อคหน้าจอ และ ล็อค touch-action ---
         document.body.style.overflow = 'hidden';
+        drawingCanvas.style.touchAction = 'none'; // ห้ามซูม/เลื่อนจอขณะวาด
         document.body.classList.add('selection-active');
         selectAreaBtn.className = "flex items-center gap-1 px-4 py-2 bg-pink-600 text-white text-sm font-bold rounded-xl shadow-lg transform scale-105";
         btnText.innerText = "วาดได้เลย";
       } else {
+        // --- โหมดนับเสร็จ: ปลดล็อคให้ซูมดูได้ปกติ ---
         document.body.style.overflow = '';
+        drawingCanvas.style.touchAction = 'auto'; // ปลดล็อคให้ 2 นิ้วถ่างซูมได้
         document.body.classList.remove('selection-active');
         selectAreaBtn.className = "flex items-center gap-1 px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 text-sm font-bold rounded-xl";
         btnText.innerText = "เลือกพื้นที่";
@@ -286,13 +288,14 @@
 
     document.getElementById("reset-btn").onclick = () => {
       if(!currentImage) return; drawnPath = null; isInSelectionMode = false;
-      document.body.style.overflow = ''; document.body.classList.remove('selection-active');
+      document.body.style.overflow = ''; 
+      drawingCanvas.style.touchAction = 'auto';
+      document.body.classList.remove('selection-active');
       selectAreaBtn.className = "flex items-center gap-1 px-4 py-2 bg-white border-2 border-slate-200 text-slate-700 text-sm font-bold rounded-xl";
       btnText.innerText = "เลือกพื้นที่";
       drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); runInference(currentImage);
     };
     
-    // --- FINAL DOWNLOAD WITH DATA STAMP ---
     document.getElementById("download-btn").onclick = () => {
       if(!currentImage) return;
       const saveCanvas = document.createElement("canvas");
