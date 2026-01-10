@@ -110,7 +110,7 @@
 
     async function loadModel() {
       try {
-        session = await ort.InferenceSession.create("./f11_yolo11n_v2.onnx"); 
+        session = await ort.InferenceSession.create("./f11_yolo11n_v3.onnx"); 
         document.getElementById("status-text").innerText = "READY model f11"; 
         document.getElementById("status").className = "flex items-center gap-1 text-[10px] bg-green-500 px-2 py-1 rounded-full border border-green-400 text-white";
         document.getElementById("status-icon").innerText = "check_circle"; 
@@ -325,4 +325,5 @@
     };
   </script>
 </body>
+
 </html>
