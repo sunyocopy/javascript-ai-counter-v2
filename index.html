@@ -52,7 +52,8 @@
       </div>
 
       <div class="flex flex-wrap gap-2 justify-center items-center bg-slate-50 p-2 rounded-2xl border border-slate-100">
-        <div class="flex items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
+        <!-- ซ่อน Conf (ใส่ hidden ไว้ ถ้าเลิกซ่อนใหนเปลี่ยน hidden เป็น flex) -->
+        <div class="hidden items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
           <div class="flex flex-col items-start pr-2 border-r border-slate-100 mr-2">
             <span class="text-[9px] font-bold text-slate-400 uppercase leading-none">Conf</span>
             <span class="text-[9px] text-indigo-500 font-bold">ความแม่น</span>
@@ -61,8 +62,8 @@
           <div id="conf-value" class="w-10 text-center font-black text-indigo-700 text-sm">0.45</div>
           <button id="conf-up" class="control-btn">+</button>
         </div>
-
-        <div class="flex items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
+        <!-- ซ่อน iou (ใส่ hidden ไว้ ถ้าเลิกซ่อนใหนเปลี่ยน hidden เป็น flex) -->
+        <div class="hidden items-center bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-sm">
           <div class="flex flex-col items-start pr-2 border-r border-slate-100 mr-2">
             <span class="text-[9px] font-bold text-slate-400 uppercase leading-none">IOU</span>
             <span class="text-[9px] text-pink-500 font-bold">ลดซ้อน</span>
